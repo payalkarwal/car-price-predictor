@@ -1,61 +1,58 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import numpy as np
-import pickle
 import os
-import tensorflow as tf
 
 app = Flask(__name__)
 CORS(app)
 
-def build_model(input_shape):
-    model = tf.keras.Sequential([
-        tf.keras.layers.Dense(64, activation='relu', input_shape=(input_shape,)),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dense(1)
-    ])
-    return model
-
-base_path = os.path.dirname(__file__)
-scaler_path = os.path.join(base_path, 'scaler.pkl')
-weights_path = os.path.join(base_path, 'model_weights.weights.h5')
-
-try:
-    scaler = pickle.load(open(scaler_path, 'rb'))
-    input_dim = scaler.n_features_in_
-    model = build_model(input_dim)
-    model.load_weights(weights_path)
-    print("AI Model weights loaded successfully!")
-except Exception as e:
-    print(f"ERROR DURING STARTUP: {e}")
-
 @app.route('/predict', methods=['POST'])
 def predict():
-    # ... your prediction logic ...
     try:
+        # Get data from the frontend
         data = request.json
-        # 1. Get the 3 numbers from your website
-        input_data = [
-            float(data['year']), 
-            float(data['age']), 
-            float(data['kmDriven'])
-        ]
+        year = float(data.get('year', 2020))
+        km = float(data.get('kmDriven', 50000))
+        brand = data.get('brand', 'Toyota')
         
-        # 2. Pad with zeros for the remaining columns
-        num_missing = input_dim - len(input_data)
-        final_input = np.array([input_data + [0] * num_missing])
+        # Base prices for different brands (in Rupees)
+        brand_map = {
+            "BMW": 4500000,
+            "Audi": 4200000,
+            "Mercedes": 4800000,
+            "Toyota": 1800000
+        }
         
-        # 3. Scale and Predict
-        scaled_features = scaler.transform(final_input)
-        prediction = model.predict(scaled_features)
+        # Default to 15L if brand not found
+        base_price = brand_map.get(brand, 1500000)
         
-        return jsonify({'price': float(prediction[0][0])})
+        # Calculate Age (Current year is 2026)
+        age = 2026 - year
+        
+        # LOGIC: 
+        # 1. Depreciate by 10% of base price for every year of age
+        # 2. Depreciate by 2 Rupees for every KM driven
+        depreciation = (age * (base_price * 0.1)) + (km * 2)
+        
+        calculated_price = base_price - depreciation
+        
+        # SAFETY: Ensure the price doesn't drop below 20% of the original value
+        floor_price = base_price * 0.2
+        final_price = max(calculated_price, floor_price)
+        
+        return jsonify({
+            'price': float(final_price),
+            'status': 'success'
+        })
+
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-import os
+# Root route to check if backend is alive
+@app.route('/', methods=['GET'])
+def home():
+    return "Car Price Predictor API is Online!"
 
 if __name__ == "__main__":
-    # This line is the magic. It asks Render "Which port should I use?"
+    # Get port from environment or default to 10000
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
