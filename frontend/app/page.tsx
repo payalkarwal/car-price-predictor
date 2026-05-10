@@ -108,11 +108,12 @@ export default function CarDashboard() {
                 {/* Main Price Card */}
                 <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-10 rounded-[2.5rem] shadow-2xl">
                   <p className="text-blue-100 text-sm font-bold uppercase tracking-widest mb-2">Estimated Market Value</p>
-                  < className="text-6xl font-black text-white">
-  ₹ {prediction ? Math.round(prediction).toLocaleString() : "0"}
-  <h2 className="text-6xl font-black text-white">
-  ₹ {prediction ? Math.round(prediction).toLocaleString() : "0"}
-</h2>
+                  
+                  {/* FIXED LINE HERE */}
+                  <h2 className="text-6xl font-black text-white">
+                    ₹ {prediction ? Math.round(prediction).toLocaleString() : "0"}
+                  </h2>
+
                   <div className="mt-6 flex gap-4">
                     <span className="bg-white/20 px-4 py-2 rounded-full text-xs font-bold text-white">Confidence: 94.2%</span>
                     <span className="bg-white/20 px-4 py-2 rounded-full text-xs font-bold text-white">Range: High Accuracy</span>
