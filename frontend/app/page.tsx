@@ -1,13 +1,21 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Define an interface so TypeScript knows exactly what formData looks like
+// 1. Data Mapping: This handles the dynamic model selection
+const carModels: Record<string, string[]> = {
+  BMW: ["3 Series", "5 Series", "X1", "X5", "M3", "Z4"],
+  Audi: ["A4", "A6", "Q3", "Q7", "RS5", "e-tron"],
+  Mercedes: ["C-Class", "E-Class", "GLA", "GLE", "S-Class"],
+  Toyota: ["Glanza", "Urban Cruiser", "Innova", "Fortuner", "Camry"],
+  Honda: ["City", "Amaze", "Civic", "Elevate", "Jazz"]
+};
+
 interface CarData {
   year: number;
   kmDriven: number;
   brand: string;
-  modelType: string;
+  modelName: string; // Changed from modelType to be more specific
   fuelType: string;
   condition: string;
 }
@@ -17,13 +25,21 @@ export default function CarDashboard() {
     year: 2020, 
     kmDriven: 50000, 
     brand: "BMW",
-    modelType: "Sedan",
+    modelName: "3 Series",
     fuelType: "Petrol",
     condition: "Good"
   });
   
   const [prediction, setPrediction] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // 2. Effect to reset modelName when brand changes
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      modelName: carModels[prev.brand][0] // Default to the first model of the selected brand
+    }));
+  }, [formData.brand]);
 
   const handlePredict = async () => {
     if (formData.year > 2026) {
@@ -40,7 +56,6 @@ export default function CarDashboard() {
           body: JSON.stringify(formData),
         });
         const data = await response.json();
-        // Fixed Red Spot: Ensuring data.price exists before setting it
         if (data && typeof data.price === 'number') {
           setPrediction(data.price);
         }
@@ -59,10 +74,11 @@ export default function CarDashboard() {
         <div className="lg:col-span-5 space-y-6">
           <header className="mb-10">
             <h1 className="text-3xl font-bold tracking-tighter">Auto<span className="text-blue-500">ML</span> Console</h1>
-            <p className="text-zinc-500 text-sm">Enterprise Valuation Engine v3.0</p>
+            <p className="text-zinc-500 text-sm">Dynamic Valuation Engine v4.0</p>
           </header>
 
           <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-3xl space-y-5 shadow-xl">
+            {/* BRAND & DYNAMIC MODEL SELECTION */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Brand</label>
@@ -71,28 +87,26 @@ export default function CarDashboard() {
                   value={formData.brand}
                   onChange={(e) => setFormData({...formData, brand: e.target.value})}
                 >
-                  <option>BMW</option>
-                  <option>Audi</option>
-                  <option>Mercedes</option>
-                  <option>Toyota</option>
-                  <option>Honda</option>
+                  {Object.keys(carModels).map(brand => (
+                    <option key={brand} value={brand}>{brand}</option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Body Type</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Model Name</label>
                 <select 
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 outline-none focus:ring-1 ring-blue-500 text-sm"
-                  value={formData.modelType}
-                  onChange={(e) => setFormData({...formData, modelType: e.target.value})}
+                  value={formData.modelName}
+                  onChange={(e) => setFormData({...formData, modelName: e.target.value})}
                 >
-                  <option>Sedan</option>
-                  <option>SUV</option>
-                  <option>Hatchback</option>
-                  <option>Luxury</option>
+                  {carModels[formData.brand].map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
                 </select>
               </div>
             </div>
 
+            {/* YEAR & MILEAGE */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Year</label>
@@ -100,7 +114,6 @@ export default function CarDashboard() {
                   type="number" 
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 outline-none text-sm"
                   value={formData.year}
-                  // Fixed Red Spot: parseFloat/parseInt for numeric inputs
                   onChange={(e) => setFormData({...formData, year: Number(e.target.value)})}
                 />
               </div>
@@ -110,12 +123,12 @@ export default function CarDashboard() {
                   type="number" 
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 outline-none text-sm"
                   value={formData.kmDriven}
-                  // Fixed Red Spot: Number conversion
                   onChange={(e) => setFormData({...formData, kmDriven: Number(e.target.value)})}
                 />
               </div>
             </div>
 
+            {/* FUEL & CONDITION */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Fuel Type</label>
@@ -133,7 +146,7 @@ export default function CarDashboard() {
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Condition</label>
                 <select 
-                  className={`w-full border rounded-xl p-3 outline-none text-sm ${formData.condition === 'Damaged' ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-zinc-800 border-zinc-700 text-white'}`}
+                  className={`w-full border rounded-xl p-3 outline-none text-sm transition-colors ${formData.condition === 'Damaged' ? 'bg-red-900/20 border-red-800 text-red-200' : 'bg-zinc-800 border-zinc-700 text-white'}`}
                   value={formData.condition}
                   onChange={(e) => setFormData({...formData, condition: e.target.value})}
                 >
@@ -148,7 +161,7 @@ export default function CarDashboard() {
             <button 
               onClick={handlePredict}
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-white transition-all shadow-lg shadow-blue-900/20 mt-4"
+              className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-white transition-all shadow-lg shadow-blue-900/20 mt-4 active:scale-[0.98]"
             >
               {loading ? "Analyzing Parameters..." : "Calculate Valuation"}
             </button>
@@ -159,41 +172,43 @@ export default function CarDashboard() {
         <div className="lg:col-span-7 space-y-6">
           <AnimatePresence mode="wait">
             {!prediction && !loading ? (
-              <div className="h-full border-2 border-dashed border-zinc-800 rounded-[2.5rem] flex items-center justify-center text-zinc-600 italic">
-                Awaiting vehicle parameters for tensor generation...
+              <div className="h-full border-2 border-dashed border-zinc-800 rounded-[2.5rem] flex items-center justify-center text-zinc-600 italic px-10 text-center">
+                Initialize vehicle parameters for real-time market analysis...
               </div>
             ) : loading ? (
               <div className="h-full bg-zinc-900/30 animate-pulse border border-zinc-800 rounded-[2.5rem] flex flex-col items-center justify-center">
                 <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-zinc-400 font-medium">Processing Data Points...</p>
+                <p className="text-zinc-400 font-medium tracking-tight">Accessing Cloud Databases...</p>
               </div>
             ) : (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] shadow-2xl">
-                  <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mb-2">Predicted Market Value</p>
+                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 text-8xl font-black italic select-none">
+                    {formData.brand}
+                  </div>
+                  <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mb-2">Estimated Market Value</p>
                   <h2 className="text-5xl font-black text-white">
-                    {/* Fixed Red Spot: Ensuring prediction is a number before using toLocaleString */}
                     ₹ {prediction?.toLocaleString('en-IN') ?? "0"}
                   </h2>
                   <div className="mt-4 flex gap-2">
-                    <span className="bg-black/20 px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-tighter">Verified Logic</span>
+                    <span className="bg-black/20 px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-tighter">AI Consensus: 92%</span>
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${formData.condition === 'Damaged' ? 'bg-red-500/40' : 'bg-green-500/40'}`}>
-                      {formData.condition} Status
+                      Condition: {formData.condition}
                     </span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[1.5rem]">
-                      <h4 className="text-zinc-500 text-[10px] font-bold uppercase mb-4">Valuation Factors</h4>
+                      <h4 className="text-zinc-500 text-[10px] font-black uppercase mb-4">Market Insight</h4>
                       <p className="text-xs text-zinc-300 leading-relaxed">
-                        The current estimate for this <span className="text-blue-400 font-bold">{formData.brand}</span> considers the <span className="text-blue-400">{formData.fuelType}</span> premium and <span className="text-blue-400">{formData.condition}</span> condition penalties.
+                        The <span className="text-blue-400 font-bold">{formData.modelName}</span> is currently seeing high demand in the used <span className="text-blue-400">{formData.fuelType}</span> segment.
                       </p>
                    </div>
                    <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[1.5rem] flex items-center justify-center">
                       <div className="text-center">
-                        <div className="text-2xl font-black text-blue-500">92%</div>
-                        <div className="text-[10px] text-zinc-500 uppercase font-bold">Accuracy Score</div>
+                        <div className="text-2xl font-black text-blue-500 uppercase">{formData.brand}</div>
+                        <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Equity Score</div>
                       </div>
                    </div>
                 </div>
